@@ -1,28 +1,14 @@
 package body I2C_Interface is
 
-   ----------
-   -- Open --
-   ----------
-
    procedure Open
      (Dev    : in out Device;
       Cfg    : I2C_Types.I2C_Config;
       Result : out I2C_Types.Status)
    is
    begin
-      --Control.Init (Dev, Cfg, Result);
       Control.Init (Dev, Cfg, Result);
-
-      --  if I2C_Types.Success (Result) then
-      --     Control.Enable (Dev, Result);
-      --  end if;
       Control.Enable (Dev, Result);
    end Open;
-
-
-   -----------
-   -- Close --
-   -----------
 
    procedure Close
      (Dev    : in out Device;
@@ -32,11 +18,6 @@ package body I2C_Interface is
       Control.Disable (Dev, Result);
    end Close;
 
-
-   -----------
-   -- Write --
-   -----------
-
    procedure Write
      (Dev     : in out Device;
       Target  : I2C_Types.I2C_Address;
@@ -45,7 +26,6 @@ package body I2C_Interface is
       Result  : out I2C_Types.Status)
    is
    begin
-      -- Data.Write (Dev, Target, Buf, Written, Result);
       Data.Write (Dev, Target, Buf);
       Written := Natural (Buf'Length);
       Result.Kind := I2C_Types.Ok;
