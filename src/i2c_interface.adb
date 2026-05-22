@@ -1,98 +1,83 @@
+with I2C_Control;
+with I2C_Data;
+
 package body I2C_Interface is
 
+   package Control is new I2C_Control
+     (Device         => Device,
+      Driver_Init    => Driver_Init,
+      Driver_Enable  => Driver_Enable,
+      Driver_Disable => Driver_Disable,
+      Driver_Reset   => Driver_Reset,
+      Driver_Recover => Driver_Recover,
+      Driver_Probe   => Driver_Probe);
+
+   package Data is new I2C_Data
+     (Device             => Device,
+      Driver_Begin_Write => Driver_Begin_Write,
+      Driver_Begin_Read  => Driver_Begin_Read,
+      Driver_Send        => Driver_Send,
+      Driver_Recv        => Driver_Recv);
+
    procedure Open
-     (Dev    : in out Device;
-      Cfg    : I2C_Types.I2C_Config;
-      Result : out I2C_Types.Status)
+     (Dev : in out Device;
+      Cfg : I2C_Types.I2C_Config)
    is
    begin
-      Control.Init (Dev, Cfg, Result);
-      Control.Enable (Dev, Result);
+      Control.Init   (Dev, Cfg);
+      Control.Enable (Dev);
    end Open;
 
-   procedure Close
-     (Dev    : in out Device;
-      Result : out I2C_Types.Status)
-   is
+   procedure Close (Dev : in out Device) is
    begin
-      Control.Disable (Dev, Result);
+      Control.Disable (Dev);
    end Close;
 
+   procedure Reset (Dev : in out Device) is
+   begin
+      Control.Reset (Dev);
+   end Reset;
+
+   procedure Recover (Dev : in out Device) is
+   begin
+      Control.Recover (Dev);
+   end Recover;
+
+   function Probe
+     (Dev    : in out Device;
+      Target : I2C_Types.I2C_Address) return Boolean
+   is
+      use type I2C_Types.Ack_State;
+   begin
+      return Control.Probe (Dev, Target) = I2C_Types.Ack;
+   end Probe;
+
    procedure Write
-     (Dev     : in out Device;
-      Target  : I2C_Types.I2C_Address;
-      Buf     : System.Storage_Elements.Storage_Array;
-      Written : out Natural;
-      Result  : out I2C_Types.Status)
+     (Dev    : in out Device;
+      Target : I2C_Types.I2C_Address;
+      Buf    : Storage_Array)
    is
    begin
       Data.Write (Dev, Target, Buf);
-      Written := Natural (Buf'Length);
-      Result.Kind := I2C_Types.Ok;
    end Write;
-
-
-   ----------
-   -- Read --
-   ----------
 
    procedure Read
      (Dev    : in out Device;
       Target : I2C_Types.I2C_Address;
-      Buf    : out System.Storage_Elements.Storage_Array;
-      Read   : out Natural;
-      Result : out I2C_Types.Status)
+      Buf    : out Storage_Array)
    is
    begin
-      --Data.Read (Dev, Target, Buf, Read, Result);
       Data.Read (Dev, Target, Buf);
-      Read := Natural (Buf'Length);
-      Result.Kind := I2C_Types.Ok;
    end Read;
 
-
-   ----------------
-   -- Write_Read --
-   ----------------
-
    procedure Write_Read
-     (Dev         : in out Device;
-      Target      : I2C_Types.I2C_Address;
-      Tx_Buf      : System.Storage_Elements.Storage_Array;
-      Tx_Written  : out Natural;
-      Rx_Buf      : out System.Storage_Elements.Storage_Array;
-      Rx_Read     : out Natural;
-      Result      : out I2C_Types.Status)
-   is
-   begin
-      Data.Write_Read
-        (Dev,
-         Target,
-         Tx_Buf,
-         Rx_Buf);
-      Tx_Written := Natural (Tx_Buf'Length);
-      Rx_Read := Natural (Rx_Buf'Length);
-      Result.Kind := I2C_Types.Ok;
-      --  Data.Write_Read
-      --    (Dev,
-      --     Target,
-      --     Tx_Buf,
-      --     Tx_Written,
-      --     Rx_Buf,
-      --     Rx_Read);
-   end Write_Read;
-
-
-   -------------
-   -- Recover --
-   -------------
-
-   procedure Recover
      (Dev    : in out Device;
-      Result : out I2C_Types.Status)
+      Target : I2C_Types.I2C_Address;
+      Tx_Buf : Storage_Array;
+      Rx_Buf : out Storage_Array)
    is
    begin
-      Control.Recover_Bus (Dev, Result);
-   end Recover;
+      Data.Write_Read (Dev, Target, Tx_Buf, Rx_Buf);
+   end Write_Read;
 
 end I2C_Interface;

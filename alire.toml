@@ -1,10 +1,104 @@
 name = "i2c_generic"
-description = ""
+description = "Generic I2C abstraction layer for bare-metal Ada applications"
 version = "0.1.0-dev"
 
 authors = ["Olivier Henley"]
 maintainers = ["Olivier Henley <olivier.henley@gmail.com>"]
 maintainers-logins = ["ohenley"]
 licenses = "MIT OR Apache-2.0 WITH LLVM-exception"
-website = ""
-tags = []
+website = "https://github.com/ohenley/baremetal_ada"
+tags = ["embedded", "bare-metal", "i2c", "hardware", "abstraction", "communication"]
+long-description = """
+
+# i2c_generic
+
+Generic I2C abstraction layer for bare-metal Ada applications.
+
+## Overview
+
+`i2c_generic` provides a hardware-independent I2C interface for embedded systems. It separates control and data operations through distinct generic packages, enabling flexible instantiation patterns and compile-time optimization for I2C master mode communication.
+
+## Features
+
+- Hardware-agnostic I2C abstraction
+- Master mode support with configurable bus speeds (100 kHz, 400 kHz, 1 MHz)
+- Separate control and data operation packages
+- Combined interface package for convenience
+- Support for Write, Read, and Write-Read transactions
+- Type-safe 7-bit addressing
+- Bus recovery and reset operations
+- Zero runtime overhead through generic instantiation
+
+## Architecture
+
+- **`I2C_Types`** - Common types and configuration records
+- **`I2C_Control`** - Bus initialization, enable/disable, reset, and recovery
+- **`I2C_Data`** - Transaction operations (write, read, write-read)
+- **`I2C_Interface`** - Combined control and data interface (instantiates Control and Data internally)
+
+## API
+
+### I2C_Types
+
+```ada
+package I2C_Types is
+   Bus_Fault : exception;
+   type I2C_Address is mod 2**7 with Size => 7;
+   type Ack_State is (Nak, Ack);
+   
+   type Bus_Speed_Kind is
+     (Standard_Mode,   -- 100 kHz
+      Fast_Mode,       -- 400 kHz
+      Fast_Mode_Plus); -- 1 MHz
+   
+   type I2C_Config is record
+      Speed : Bus_Speed_Kind := Standard_Mode;
+      Role  : Controller_Role_Kind := Master_Only;
+   end record;
+end I2C_Types;
+```
+
+### I2C_Interface
+
+```ada
+generic
+   type Device_T is limited private;
+   with procedure Driver_Init        (Dev : in out Device_T; Cfg : I2C_Types.I2C_Config);
+   with procedure Driver_Enable      (Dev : in out Device_T);
+   with procedure Driver_Disable     (Dev : in out Device_T);
+   with procedure Driver_Reset       (Dev : in out Device_T);
+   with procedure Driver_Recover     (Dev : in out Device_T);
+   with procedure Driver_Probe       (Dev : in out Device_T; Target : I2C_Types.I2C_Address; Result : out I2C_Types.Ack_State);
+   with procedure Driver_Begin_Write (Dev : in out Device_T; Target : I2C_Types.I2C_Address; Length : Natural; Stop : Boolean);
+   with procedure Driver_Begin_Read  (Dev : in out Device_T; Target : I2C_Types.I2C_Address; Length : Natural; Stop : Boolean);
+   with procedure Driver_Send        (Dev : in out Device_T; B : Storage_Element);
+   with procedure Driver_Recv        (Dev : in out Device_T; B : out Storage_Element; Ack : Boolean);
+package I2C_Interface is
+   procedure Open    (Dev : in out Device; Cfg : I2C_Types.I2C_Config);
+   procedure Close   (Dev : in out Device);
+   procedure Reset   (Dev : in out Device);
+   procedure Recover (Dev : in out Device);
+   function Probe    (Dev : in out Device; Target : I2C_Types.I2C_Address) return Boolean;
+   procedure Write   (Dev : in out Device; Target : I2C_Types.I2C_Address; Buf : Storage_Array);
+   procedure Read    (Dev : in out Device; Target : I2C_Types.I2C_Address; Buf : out Storage_Array);
+   procedure Write_Read (Dev : in out Device; Target : I2C_Types.I2C_Address; Tx_Buf : Storage_Array; Rx_Buf : out Storage_Array);
+end I2C_Interface;
+```
+
+## Usage Example
+
+Implement hardware driver, instantiate MCU-level package, instantiate board-level interface, then use:
+
+```ada
+I2C_Bus.Open (Dev, (Speed => I2C_Types.Fast_Mode, Role => I2C_Types.Master_Only));
+
+if I2C_Bus.Probe (Dev, 16#76#) then
+   I2C_Bus.Write_Read (Dev, 16#76#, (1 => 16#D0#), Chip_ID);
+end if;
+```
+
+## Design Rationale
+
+The limited private `Device` type prevents accidental copying. Generic instantiation provides zero runtime overhead. The layered architecture enables portability and clear separation of concerns.
+
+"""
